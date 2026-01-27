@@ -1,0 +1,127 @@
+name: publish documentation to Github Pages repository
+description: "Kopiert generierte Doku versioniert in ein Pages-Repository"
+
+inputs:
+  plugin_id:
+    description: "Eindeutige Plugin-ID (Ordnername)"
+    required: true
+
+  version:
+    description: "Versions-Tag der Dokumentation"
+    required: true
+
+  source_dir:
+    description: "Pfad zur erzeugten Dokumentation"
+    required: true
+
+  docs_repo:
+    description: "Repository für GitHub Pages"
+    required: true
+
+  docs_branch:
+    description: "Branch im Docs-Repository"
+    default: "main"
+
+  target_base_path:
+    description: "Basisverzeichnis im Docs-Repo"
+    default: "."
+
+  github_token:
+    description: "Access Token mit Schreibrechten"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Action initialized
+      shell: bash
+      run: |
+        echo "=== Publish Docs Action ==="
+        echo "Plugin ID        : ${{ inputs.plugin_id }}"
+        echo "Version          : ${{ inputs.version }}"
+        echo "Source dir       : ${{ inputs.source_dir }}"
+        echo "Docs repository  : ${{ inputs.docs_repo }}"
+        echo "Docs branch      : ${{ inputs.docs_branch }}"
+        echo "Target base path : ${{ inputs.target_base_path }}"
+        echo "==========================="
+
+    - name: Validate inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        error() {
+          echo "::error::$1"
+          exit 1
+        }
+
+        # Pflichtfelder
+        [ -z "${{ inputs.plugin_id }}" ]     && error "plugin_id is required and must not be empty"
+        [ -z "${{ inputs.version }}" ]       && error "version is required and must not be empty"
+        [ -z "${{ inputs.source_dir }}" ]    && error "source_dir is required and must not be empty"
+        [ -z "${{ inputs.docs_repo }}" ]     && error "docs_repo is required and must not be empty"
+        [ -z "${{ inputs.github_token }}" ]  && error "github_token is required and must not be empty"
+
+        # source_dir muss existieren
+        if [ ! -d "${{ inputs.source_dir }}" ]; then
+          error "source_dir does not exist or is not a directory: ${{ inputs.source_dir }}"
+        fi
+
+        # plugin_id: nur ordnerfreundliche Zeichen
+        if ! [[ "${{ inputs.plugin_id }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+          error "plugin_id contains invalid characters (allowed: a-z A-Z 0-9 . _ -)"
+        fi
+
+        # version: keine Leerzeichen, keine Slashes
+        if [[ "${{ inputs.version }}" =~ [[:space:]/] ]]; then
+          error "version must not contain spaces or slashes"
+        fi
+
+        echo "Input validation passed."
+
+    - name: Checkout docs repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.docs_repo }}
+        ref: ${{ inputs.docs_branch }}
+        token: ${{ inputs.github_token }}
+        path: docs-repo
+
+    - name: Publish documentation
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        PLUGIN_ID="${{ inputs.plugin_id }}"
+        VERSION="${{ inputs.version }}"
+        SOURCE_DIR="${{ inputs.source_dir }}"
+        BASE_PATH="${{ inputs.target_base_path }}"
+
+        if [ ! -d "$SOURCE_DIR" ]; then
+          echo "Source dir not found: $SOURCE_DIR"
+          exit 1
+        fi
+
+        TARGET_DIR="docs-repo/${BASE_PATH}/${PLUGIN_ID}/${VERSION}"
+
+        echo "Publishing docs to $TARGET_DIR"
+
+        rm -rf "$TARGET_DIR"
+        mkdir -p "$TARGET_DIR"
+
+        cp -R "$SOURCE_DIR"/. "$TARGET_DIR"/
+        
+        cd docs-repo
+
+        git config user.name "docs-bot"
+        git config user.email "docs-bot@users.noreply.github.com"
+
+        git add .
+
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+
+        git commit -m "docs(${PLUGIN_ID}): publish ${VERSION}"
+        git push
