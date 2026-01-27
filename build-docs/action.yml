@@ -2,11 +2,6 @@ name: Build MkDocs Documentation
 description: Build HTML documentation from Markdown using MkDocs Material
 
 inputs:
-  docs_dir:
-    description: "Directory containing the MkDocs documentation sources"
-    required: false
-    default: "docs"
-
   mkdocs_config:
     description: "Path to mkdocs.yml"
     required: false
