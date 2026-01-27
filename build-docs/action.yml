@@ -15,11 +15,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Composite action initialized
+    - name: action initialized
       run: |
-        echo "Building documentation for plugin: ${{ inputs.plugin_name }}"
-        echo "Version: ${{ inputs.version }}"
-        echo "Deploy enabled: ${{ inputs.deploy }}"
+        echo "=== Docs Builder Action ==="
+            echo "Plugin Name      : ${{ inputs.plugin_name }}"
+            echo "Version          : ${{ inputs.version }}"
+            echo "Deploy enabled   : ${{ inputs.deploy }}"
+            echo "==========================="
       shell: bash
 
     - name: Setup Python
