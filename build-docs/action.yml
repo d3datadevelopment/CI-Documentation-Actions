@@ -1,0 +1,63 @@
+name: Build MkDocs Documentation
+description: Build HTML documentation from Markdown using MkDocs Material
+
+inputs:
+  docs_dir:
+    description: "Directory containing the MkDocs documentation sources"
+    required: false
+    default: "docs"
+
+  mkdocs_config:
+    description: "Path to mkdocs.yml"
+    required: false
+    default: "mkdocs.yml"
+
+  site_name:
+    description: "Override MkDocs site_name (optional)"
+    required: false
+
+  site_url:
+    description: "Override MkDocs site_url (optional)"
+    required: false
+
+  output_dir:
+    description: "Output directory for generated HTML"
+    required: false
+    default: "documentation"
+
+runs:
+  using: composite
+  steps:
+    - name: Composite action initialized
+      run: |
+        echo "Building documentation for plugin: ${{ inputs.plugin_name }}"
+        echo "Version: ${{ inputs.version }}"
+        echo "Deploy enabled: ${{ inputs.deploy }}"
+      shell: bash
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install MkDocs and Material theme
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install mkdocs mkdocs-material
+
+    - name: Build documentation
+      shell: bash
+      run: |
+        CMD="mkdocs build --config-file '${{ inputs.mkdocs_config }}' --site-dir '${{ inputs.output_dir }}'"
+
+        if [ -n "${{ inputs.site_name }}" ]; then
+          CMD="$CMD --site-name '${{ inputs.site_name }}'"
+        fi
+
+        if [ -n "${{ inputs.site_url }}" ]; then
+          CMD="$CMD --site-url '${{ inputs.site_url }}'"
+        fi
+
+        echo "Running: $CMD"
+        eval "$CMD"
