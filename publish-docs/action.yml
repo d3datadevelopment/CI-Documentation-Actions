@@ -110,6 +110,7 @@ runs:
         VERSION="${{ inputs.version }}"
         SOURCE_DIR="${{ inputs.source_dir }}"
         BASE_PATH="${{ inputs.target_base_path }}"
+        BRANCH="${{ inputs.docs_branch }}"
 
         if [ ! -d "$SOURCE_DIR" ]; then
           echo "Source dir not found: $SOURCE_DIR"
