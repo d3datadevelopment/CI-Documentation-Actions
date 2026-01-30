@@ -1,41 +1,68 @@
-# Publish Docs to GitHub Pages
+# Versionierte Dokumentation aus CI heraus deployen
 
-Diese **GitHub Action** veröffentlicht **generierte Dokumentationen** versioniert in einem separaten **GitHub-Pages-Repository**.
+**Publish Documentation** ist eine Composite GitHub Action zur **kontrollierten Veröffentlichung versionierter Dokumentation** in ein separates GitHub-Pages-Repository.
+Sie ist dafür gedacht, **bereits generierte Dokumentation** (z. B. aus MkDocs, Docusaurus, Sphinx, Custom-Generatoren) aus einem CI-Workflow heraus **strukturiert, reproduzierbar und versionssicher** zu publizieren.
 
-Typischer Anwendungsfall:
-Plugins oder Libraries erzeugen ihre Dokumentation in einer CI (z. B. aus Markdown). Diese Action übernimmt das **strukturierte Ablegen**, **Ersetzen** und **Veröffentlichen** der Inhalte.
+Die Action übernimmt bewusst **keine Generierung**, sondern ausschließlich das **Verteilen, Versionieren und Committen** der fertigen Artefakte.
 
----
+### Typische Einsatzszenarien
 
-## Features
+* Versionierte Modul- oder Plugin-Dokumentation
+* Zentrale Doku-Repositories für mehrere Kundenprojekte
+* Automatisches Publizieren bei Tags oder Releases
+* Ersatz für manuelle GitHub-Pages-Pflege
+* Kombination mit MkDocs, Material, Docusaurus oder Custom-Generatoren
 
-* Versionierte Ablage pro Plugin
-* Vollständiger Replace bei Neuveröffentlichung
-* Idempotent (gleicher Input → gleiches Ergebnis)
-* Fail-fast Input-Validierung
-* Keine Node- oder Build-Abhängigkeiten
-* Transparent & debug-freundlich (reines Bash)
+## Zielstruktur im Pages-Repository
 
----
-
-## Zielstruktur im Docs-Repository
+Die Dokumentation wird nach folgendem Schema abgelegt:
 
 ```
-/
-├─ index.html
-├─ plugin-a/
-│  ├─ index.html
-│  ├─ 1.0.0/
-│  └─ 1.0.1/
-├─ plugin-b/
-│  ├─ index.html
-│  └─ 2.3.0/
+<target_base_path>/
+└── <plugin_id>/
+    └── <version>/
+        └── ... Doku-Inhalte ...
 ```
+
+Damit lassen sich mehrere Plugins/Module sowie mehrere Versionen parallel betreiben, ohne sich gegenseitig zu überschreiben.
 
 Jede Version ist ein vollständiger Snapshot.
 Bestehende Versionen werden bei erneutem Deploy **komplett ersetzt**.
 
+## Enthaltene Schritte
+
+**1. Initialisierung & Validierung**
+
+* Explizite Ausgabe aller relevanten Parameter
+* Strikte Validierung:
+
+  * Pflichtfelder müssen gesetzt sein
+  * `plugin_id` nur mit ordnerfreundlichen Zeichen
+  * `version` ohne Leerzeichen oder Slashes
+  * `source_dir` muss existieren
+* Frühes, sauberes Abbrechen bei Konfigurationsfehlern
+
 ---
+
+**2. Checkout des Pages-Repositories**
+
+* Checkout eines beliebigen Repositories und Branches
+* Authentifizierung über explizites Access Token
+* Keine Annahmen über Default-Repos oder Organisationsstruktur
+
+---
+
+**3. Veröffentlichung der Dokumentation**
+
+* Zielverzeichnis wird deterministisch berechnet
+* Bestehende Versionen werden **vollständig ersetzt**
+* Rekursives Kopieren der erzeugten Doku-Artefakte
+* Commit nur bei tatsächlichen Änderungen
+* Klar strukturierte Commit-Nachrichten:
+
+  ```
+  docs(<plugin_id>): publish <version>
+  ```
 
 ## Inputs
 
@@ -49,53 +76,21 @@ Bestehende Versionen werden bei erneutem Deploy **komplett ersetzt**.
 | `target_base_path` | nein    | Basisverzeichnis im Docs-Repository    |
 | `github_token`     | ja      | Access Token mit Schreibrechten        |
 
----
-
 ## Berechtigungen
 
 Das übergebene `github_token` benötigt Schreibrechte (`contents: write`) auf dem Docs-Repository.
 
-Hinweis:
-Der automatische `GITHUB_TOKEN` reicht oft nicht aus, wenn das Ziel-Repository ein anderes ist.
-In diesem Fall muss ein Personal Access Token (PAT) verwendet werden.
-
----
-
-## Input-Validierung
-
-Die Action prüft unter anderem:
-
-* Pflichtinputs sind nicht leer
-* `source_dir` existiert
-* `plugin_id` enthält nur ordnerfreundliche Zeichen
-* `version` enthält keine Leerzeichen oder Slashes
-
-Bei einem Fehler bricht die Action sofort ab.
-
----
-
-## Beispiel: Verwendung im Workflow
+## Integrationsbeispiel
 
 ```yaml
 - name: Publish documentation
-  uses: ./.github/actions/publish-docs-to-pages
+  uses: d3datadevelopment/ci-actions/publish-docs@v1
   with:
-    plugin_id: oxid-paypal
-    version: 1.0.1
-    source_dir: build/docs
-    docs_repo: my-org/plugin-docs
+    plugin_id: myplugin
+    version: 1.0.0
+    source_dir: documentation
+    docs_repo: myOrga/docs
     docs_branch: main
     target_base_path: .
     github_token: ${{ secrets.DOCS_REPO_TOKEN }}
 ```
-
----
-
-## Interner Ablauf (Kurzfassung)
-
-1. Checkout des Docs-Repositories
-2. Ausgabe der übergebenen Inputs (Debug)
-3. Validierung aller Parameter
-4. Entfernen der bestehenden Version (falls vorhanden)
-5. Kopieren der neuen Dokumentation
-6. Commit & Push (nur bei Änderungen)

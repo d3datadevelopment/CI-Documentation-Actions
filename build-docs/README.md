@@ -1,36 +1,45 @@
-# Build MkDocs Documentation
+# HTML-Dokumentation aus Markdown erzeugen
 
-This action builds static HTML documentation from Markdown sources
-using **MkDocs with the Material theme**.
+**Build MkDocs Documentation** ist eine schlanke Composite GitHub Action zum **Erzeugen statischer HTML-Dokumentation** auf Basis von Markdown-Dateien mit **MkDocs und dem Material Theme**.
+Sie ist bewusst auf den **Build-Schritt** fokussiert und eignet sich als Baustein in mehrstufigen CI-Pipelines, z. B. in Kombination mit separaten Publish- oder Deploy-Actions.
 
-## Design Principles
+Die Action übernimmt ausschließlich das Setup der Build-Umgebung und die deterministische Erzeugung der HTML-Artefakte.
 
-- Documentation lives **inside the plugin repository**
-- Generated HTML is a **build artifact**
-- This action performs **build only**
-- Deployment and versioning are handled by the calling workflow
+## Typische Einsatzszenarien
 
-The action is intentionally minimal and side-effect free.
+* Generierung von HTML-Dokumentation für Module, Plugins oder Libraries
+* Vorbereitung von Artefakten für GitHub Pages oder interne Doku-Repositories
+* CI-Pipelines mit klarer Trennung von Build und Deploy
+* Einheitliche Dokumentations-Builds über mehrere Projekte hinweg
 
----
+## Enthaltene Schritte
 
-## What This Action Does
+**1. Python-Setup**
 
-- Sets up a deterministic Python environment
-- Installs MkDocs and the Material theme
-- Runs `mkdocs build`
-- Outputs generated HTML to a configurable directory
+* Installation einer definierten Python-Version (3.11)
+* Reproduzierbare Build-Umgebung für MkDocs
 
 ---
 
-## What This Action Does NOT Do
+**2. Installation der Dokumentations-Toolchain**
 
-- No deployment (GitHub Pages, FTP, etc.)
-- No commits back to the plugin repository
-- No knowledge about plugin names or versions
-- No release logic
+Installierte Komponenten:
+
+* `mkdocs`
+* `mkdocs-material`
+* `mkdocs-macros-plugin`
+* `mkdocs-include-markdown-plugin`
+
+Damit werden sowohl klassische Material-Dokumentationen als auch modulare, wiederverwendbare Markdown-Strukturen unterstützt.
 
 ---
+
+**3. Build der Dokumentation**
+
+* Verwendung einer konfigurierbaren `mkdocs.yml`
+* Ausgabe der generierten HTML-Dateien in ein frei wählbares Zielverzeichnis
+* Klare, nachvollziehbare Build-Ausgabe im CI-Log
+* Kein Server, kein Preview, kein Deploy
 
 ## Inputs
 
@@ -42,13 +51,12 @@ The action is intentionally minimal and side-effect free.
 | `site_url`      | no       | –           | Override `site_url` from config |
 | `output_dir`    | no       | `site`      | Output directory for generated HTML |
 
----
+## Integrationsbeispiel
 
-## Typical Usage
-
-```yaml
-- uses: ./.github/actions/build-mkdocs
+```
+- name: Build documentation
+  uses: d3datadevelopment/ci-actions/build-docs@v1
   with:
-    site_name: Plugin XYZ
-    site_url: https://org.github.io/docs/plugin-xyz/latest/
+    mkdocs_config: docs/mkdocs.yml
+    output_dir: ${{ github.workspace }}/documentation
 ```
