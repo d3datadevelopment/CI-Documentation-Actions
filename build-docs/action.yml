@@ -38,7 +38,11 @@ runs:
     - name: Build documentation
       shell: bash
       run: |
+        set -euo pipefail
+
         CMD="mkdocs build --config-file '${{ inputs.mkdocs_config }}' --site-dir '${{ inputs.output_dir }}'"
 
         echo "Running: $CMD"
         eval "$CMD"
+
+        find "${{ inputs.output_dir }}" -name 'sitemap.xml*' -delete
