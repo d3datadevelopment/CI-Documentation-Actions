@@ -89,7 +89,7 @@ Das übergebene `access_token` benötigt Schreibrechte (`contents: write`) auf d
     plugin_id: myplugin
     version: ${{ github.ref_name }}
     source_dir: documentation
-    docs_repo: https://www.github.com/myOrga/myRepo.git
+    docs_repo: {{ vars.DOCS_REPO_URL }}
     docs_branch: main
     target_base_path: .
     access_token: ${{ secrets.DOCS_REPO_TOKEN }}
