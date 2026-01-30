@@ -66,15 +66,16 @@ Bestehende Versionen werden bei erneutem Deploy **komplett ersetzt**.
 
 ## Inputs
 
-| Name               | Pflicht | Beschreibung                           |
-| ------------------ | ------- | -------------------------------------- |
-| `plugin_id`        | ja      | Eindeutige Plugin-ID (wird Ordnername) |
-| `version`          | ja      | Versionskennung der Dokumentation      |
-| `source_dir`       | ja      | Pfad zur generierten Dokumentation     |
-| `docs_repo`        | ja      | Ziel-Repository (GitHub Pages)         |
-| `docs_branch`      | nein    | Ziel-Branch (Default: `main`)          |
-| `target_base_path` | nein    | Basisverzeichnis im Docs-Repository    |
-| `access_token`     | ja      | Access Token mit Schreibrechten        |
+| Name               | Pflicht | Beschreibung                              |
+| ------------------ | ------- | ----------------------------------------- |
+| `plugin_id`        | ja      | Eindeutige Plugin-ID (wird Ordnername)    |
+| `version`          | ja      | Versionskennung der Dokumentation         |
+| `source_dir`       | ja      | Pfad zur generierten Dokumentation        |
+| `docs_repo`        | ja      | Ziel-Repository (GitHub Pages)            |
+| `git_username`     | ja      | Git Benutzername für HTTPS Authentication |
+| `access_token`     | ja      | Access Token mit Schreibrechten           |
+| `docs_branch`      | nein    | Ziel-Branch (Default: `main`)             |
+| `target_base_path` | nein    | Basisverzeichnis im Docs-Repository       |
 
 ## Berechtigungen
 
@@ -89,8 +90,9 @@ Das übergebene `access_token` benötigt Schreibrechte (`contents: write`) auf d
     plugin_id: myplugin
     version: ${{ github.ref_name }}
     source_dir: documentation
-    docs_repo: {{ vars.DOCS_REPO_URL }}
+    docs_repo: ${{ vars.DOCS_REPO_URL }}
+    git_username: ${{ vars.DOCS_REPO_USER }}
+    access_token: ${{ secrets.DOCS_REPO_TOKEN }}
     docs_branch: main
     target_base_path: .
-    access_token: ${{ secrets.DOCS_REPO_TOKEN }}
 ```

@@ -18,6 +18,14 @@ inputs:
     description: "HTTPS clone URL des Ziel-Repositories"
     required: true
 
+  git_username:
+    description: "Git Benutzername für HTTPS Authentication"
+    required: true
+
+  access_token:
+    description: "Access Token mit Schreibrechten"
+    required: true
+
   docs_branch:
     description: "Branch im Docs-Repository"
     default: "main"
@@ -25,10 +33,6 @@ inputs:
   target_base_path:
     description: "Basisverzeichnis im Docs-Repo"
     default: "."
-
-  access_token:
-    description: "Access Token mit Schreibrechten"
-    required: true
 
 runs:
   using: "composite"
@@ -86,9 +90,10 @@ runs:
 
         REPO="${{ inputs.docs_repo }}"
         BRANCH="${{ inputs.docs_branch }}"
+        GIT_USER="${{ inputs.git_username }}"
         TOKEN="${{ inputs.access_token }}"
 
-        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${TOKEN}@#")"
+        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
 
         echo "::add-mask::${TOKEN}"
 
@@ -111,6 +116,13 @@ runs:
         SOURCE_DIR="${{ inputs.source_dir }}"
         BASE_PATH="${{ inputs.target_base_path }}"
         BRANCH="${{ inputs.docs_branch }}"
+        REPO="${{ inputs.docs_repo }}"
+        GIT_USER="${{ inputs.git_username }}"
+        TOKEN="${{ inputs.access_token }}"
+
+        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
+
+        echo "::add-mask::${TOKEN}"
 
         if [ ! -d "$SOURCE_DIR" ]; then
           echo "Source dir not found: $SOURCE_DIR"
@@ -139,4 +151,5 @@ runs:
         fi
 
         git commit -m "docs(${PLUGIN_ID}): publish ${VERSION}"
+        git remote set-url origin "$AUTH_REPO"
         git push -u origin "$BRANCH"
