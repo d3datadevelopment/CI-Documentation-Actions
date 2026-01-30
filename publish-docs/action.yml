@@ -1,5 +1,5 @@
-name: publish documentation to Github Pages repository
-description: "Kopiert generierte Doku versioniert in ein Pages-Repository"
+name: publish documentation to git repository
+description: "Kopiert generierte Doku versioniert in ein Repository"
 
 inputs:
   plugin_id:
@@ -15,7 +15,7 @@ inputs:
     required: true
 
   docs_repo:
-    description: "Repository für GitHub Pages"
+    description: "HTTPS clone URL des Ziel-Repositories"
     required: true
 
   docs_branch:
@@ -26,7 +26,7 @@ inputs:
     description: "Basisverzeichnis im Docs-Repo"
     default: "."
 
-  github_token:
+  access_token:
     description: "Access Token mit Schreibrechten"
     required: true
 
@@ -60,7 +60,7 @@ runs:
         [ -z "${{ inputs.version }}" ]       && error "version is required and must not be empty"
         [ -z "${{ inputs.source_dir }}" ]    && error "source_dir is required and must not be empty"
         [ -z "${{ inputs.docs_repo }}" ]     && error "docs_repo is required and must not be empty"
-        [ -z "${{ inputs.github_token }}" ]  && error "github_token is required and must not be empty"
+        [ -z "${{ inputs.access_token }}" ]  && error "access_token is required and must not be empty"
 
         # source_dir muss existieren
         if [ ! -d "${{ inputs.source_dir }}" ]; then
@@ -79,13 +79,27 @@ runs:
 
         echo "Input validation passed."
 
-    - name: Checkout docs repository
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ inputs.docs_repo }}
-        ref: ${{ inputs.docs_branch }}
-        token: ${{ inputs.github_token }}
-        path: docs-repo
+    - name: Clone docs repository
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        REPO="${{ inputs.docs_repo }}"
+        BRANCH="${{ inputs.docs_branch }}"
+        TOKEN="${{ inputs.access_token }}"
+
+        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${TOKEN}@#")"
+
+        echo "::add-mask::${TOKEN}"
+
+        git clone "$AUTH_REPO" docs-repo
+        cd docs-repo
+
+        if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+          git checkout "$BRANCH"
+        else
+          git checkout -b "$BRANCH"
+        fi
 
     - name: Publish documentation
       shell: bash
@@ -124,4 +138,4 @@ runs:
         fi
 
         git commit -m "docs(${PLUGIN_ID}): publish ${VERSION}"
-        git push
+        git push -u origin "$BRANCH"

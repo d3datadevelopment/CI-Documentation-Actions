@@ -1,6 +1,6 @@
 # Versionierte Dokumentation aus CI heraus deployen
 
-**Publish Documentation** ist eine Composite GitHub Action zur **kontrollierten Veröffentlichung versionierter Dokumentation** in ein separates GitHub-Pages-Repository.
+**Publish Documentation** ist eine Composite GitHub Action zur **kontrollierten Veröffentlichung versionierter Dokumentation** in ein separates Repository.
 Sie ist dafür gedacht, **bereits generierte Dokumentation** (z. B. aus MkDocs, Docusaurus, Sphinx, Custom-Generatoren) aus einem CI-Workflow heraus **strukturiert, reproduzierbar und versionssicher** zu publizieren.
 
 Die Action übernimmt bewusst **keine Generierung**, sondern ausschließlich das **Verteilen, Versionieren und Committen** der fertigen Artefakte.
@@ -74,11 +74,11 @@ Bestehende Versionen werden bei erneutem Deploy **komplett ersetzt**.
 | `docs_repo`        | ja      | Ziel-Repository (GitHub Pages)         |
 | `docs_branch`      | nein    | Ziel-Branch (Default: `main`)          |
 | `target_base_path` | nein    | Basisverzeichnis im Docs-Repository    |
-| `github_token`     | ja      | Access Token mit Schreibrechten        |
+| `access_token`     | ja      | Access Token mit Schreibrechten        |
 
 ## Berechtigungen
 
-Das übergebene `github_token` benötigt Schreibrechte (`contents: write`) auf dem Docs-Repository.
+Das übergebene `access_token` benötigt Schreibrechte (`contents: write`) auf dem Docs-Repository.
 
 ## Integrationsbeispiel
 
@@ -87,10 +87,10 @@ Das übergebene `github_token` benötigt Schreibrechte (`contents: write`) auf d
   uses: d3datadevelopment/ci-actions/publish-docs@v1
   with:
     plugin_id: myplugin
-    version: 1.0.0
+    version: ${{ github.ref_name }}
     source_dir: documentation
-    docs_repo: myOrga/docs
+    docs_repo: https://www.github.com/myOrga/myRepo.git
     docs_branch: main
     target_base_path: .
-    github_token: ${{ secrets.DOCS_REPO_TOKEN }}
+    access_token: ${{ secrets.DOCS_REPO_TOKEN }}
 ```
