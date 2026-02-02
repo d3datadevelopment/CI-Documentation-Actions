@@ -34,3 +34,7 @@ Weitere Infos [hier](./build-docs/README.md).
 Sie ist dafür gedacht, **bereits generierte Dokumentation** (z. B. aus MkDocs, Docusaurus, Sphinx, Custom-Generatoren) aus einem CI-Workflow heraus **strukturiert, reproduzierbar und versionssicher** zu publizieren.
 
 Weitere Infos [hier](./publish-docs/README.md).
+
+## Beispiele
+
+Schaue in den [Beispiele-Ordner](./examples) für Integrationsbeispiele.
