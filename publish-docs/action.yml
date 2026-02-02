@@ -7,7 +7,7 @@ inputs:
     required: true
 
   version:
-    description: "Versions-Tag der Dokumentation"
+    description: "Versions-Tag (optional mit PHP-Suffix im Patchlevel)"
     required: true
 
   source_dir:
@@ -83,6 +83,55 @@ runs:
 
         echo "Input validation passed."
 
+    - name: Normalize documentation version
+      id: normalize_version
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        RAW_VERSION="${{ inputs.version }}"
+
+        # optionales führendes "v" entfernen (z.B. v1.2.3.4 → 1.2.3.4)
+        RAW_VERSION="${RAW_VERSION#v}"
+
+        # Fall 1: 3-Level-Version: MAJOR.MINOR.PATCH
+        if [[ "$RAW_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          DOC_VERSION="$RAW_VERSION"
+
+        # Fall 2 & 3: 4-Level-Version: MAJOR.MINOR.SUBMINOR.PATCH
+        elif [[ "$RAW_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          SUBMINOR="${BASH_REMATCH[3]}"
+          PATCH="${BASH_REMATCH[4]}"
+
+          PATCH_LEN="${#PATCH}"
+
+          case "$PATCH_LEN" in
+          1|2)
+            # normale 4-Level-Version
+            DOC_PATCH="$PATCH"
+            ;;
+          3)
+            # Composer-Sonderfall: Patch + PHP
+            DOC_PATCH="${PATCH:0:1}"
+            ;;
+          *)
+            echo "::error::Unsupported patch length (${PATCH_LEN}) in version: $RAW_VERSION"
+            exit 1
+            ;;
+          esac
+
+          DOC_VERSION="${MAJOR}.${MINOR}.${SUBMINOR}.${DOC_PATCH}"
+
+        else
+          echo "::error::Invalid version format: $RAW_VERSION"
+          exit 1
+        fi
+
+        echo "Resolved documentation version: $DOC_VERSION"
+        echo "doc_version=$DOC_VERSION" >> "$GITHUB_OUTPUT"
+
     - name: Clone docs repository
       shell: bash
       run: |
@@ -112,7 +161,7 @@ runs:
         set -euo pipefail
 
         PLUGIN_ID="${{ inputs.plugin_id }}"
-        VERSION="${{ inputs.version }}"
+        VERSION="${{ steps.normalize_version.outputs.doc_version }}"
         SOURCE_DIR="${{ inputs.source_dir }}"
         BASE_PATH="${{ inputs.target_base_path }}"
         BRANCH="${{ inputs.docs_branch }}"

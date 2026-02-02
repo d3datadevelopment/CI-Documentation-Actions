@@ -96,3 +96,15 @@ Das übergebene `access_token` benötigt Schreibrechte (`contents: write`) auf d
     docs_branch: main
     target_base_path: .
 ```
+
+## Versionsnormalisierung
+
+Die übergebene Versionsnummer wird vor der Veröffentlichung automatisch normalisiert.
+
+Dabei werden u. a. folgende Fälle berücksichtigt:
+
+- optionale führende `v`-Präfixe (z. B. `v1.2.3`)
+- organisationsweit verwendete Sonderformate für Compiler-/PHP-Varianten
+
+Die Dokumentation wird stets unter der **fachlich relevanten Version** veröffentlicht.
+Abweichende oder ungültige Versionsformate führen zu einem Abbruch des Workflows.
