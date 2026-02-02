@@ -105,21 +105,10 @@ runs:
           SUBMINOR="${BASH_REMATCH[3]}"
           PATCH="${BASH_REMATCH[4]}"
 
-          PATCH_LEN="${#PATCH}"
-
-          case "$PATCH_LEN" in
-          1|2)
-            # normale 4-Level-Version
-            DOC_PATCH="$PATCH"
-            ;;
-          3)
-            # Composer-Sonderfall: Patch + PHP
-            DOC_PATCH="${PATCH:0:1}"
-            ;;
-          *)
-            echo "::error::Unsupported patch length (${PATCH_LEN}) in version: $RAW_VERSION"
-            exit 1
-            ;;
+          case "${#PATCH}" in
+            1|2) DOC_PATCH="$PATCH" ;;
+            3)   DOC_PATCH="${PATCH:0:1}" ;;
+            *)   echo "::error::Unsupported patch length in version: $RAW_VERSION"; exit 1 ;;
           esac
 
           DOC_VERSION="${MAJOR}.${MINOR}.${SUBMINOR}.${DOC_PATCH}"
@@ -186,7 +175,7 @@ runs:
         mkdir -p "$TARGET_DIR"
 
         cp -R "$SOURCE_DIR"/. "$TARGET_DIR"/
-        
+
         cd docs-repo
 
         git config user.name "docs-bot"
