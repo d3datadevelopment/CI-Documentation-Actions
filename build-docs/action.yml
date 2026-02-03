@@ -47,7 +47,8 @@ runs:
         MKDOCS_CONFIG="${{ inputs.mkdocs_config }}"
         DOCS_DIR="$(dirname "$MKDOCS_CONFIG")"
 
-        PLUGIN_VERSION="${GITHUB_REF_NAME#v}"
+        RAW_VERSION="${{ inputs.version }}"
+        PLUGIN_VERSION="${RAW_VERSION#v}"
         PLUGIN_DATE="$(date +'%d.%m.%Y')"
 
         if [[ "$PLUGIN_VERSION" =~ ^(.+)\.([0-9]{3})$ ]]; then
