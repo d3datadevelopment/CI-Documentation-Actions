@@ -41,6 +41,7 @@ jobs:
       - name: Build documentation
         uses: d3datadevelopment/ci-actions/build-docs@v1.1.0
         with:
+          version: ${{ github.ref_name }}
           mkdocs_config: ${{ env.MKDOCS_CONFIG }}
           output_dir: ${{ github.workspace }}/${{ env.DOCS_OUTPUT_DIR }}
 
