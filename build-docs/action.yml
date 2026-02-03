@@ -2,6 +2,10 @@ name: Build MkDocs Documentation
 description: Build HTML documentation from Markdown using MkDocs Material
 
 inputs:
+  version:
+    description: "Versions-Tag (optional mit PHP-Suffix im Patchlevel)"
+    required: true
+
   mkdocs_config:
     description: "Path to mkdocs.yml"
     required: false
@@ -39,6 +43,26 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+
+        MKDOCS_CONFIG="${{ inputs.mkdocs_config }}"
+        DOCS_DIR="$(dirname "$MKDOCS_CONFIG")"
+
+        PLUGIN_VERSION="${GITHUB_REF_NAME#v}"
+        PLUGIN_DATE="$(date +'%d.%m.%Y')"
+
+        if [[ "$RAW_VERSION" =~ ^(.+)\.([0-9]{3})$ ]]; then
+          PLUGIN_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]:0:1}"
+        fi
+
+        echo "MkDocs config : $MKDOCS_CONFIG"
+        echo "Docs directory: $DOCS_DIR"
+        echo "Plugin version: $PLUGIN_VERSION"
+        echo "Plugin date   : $PLUGIN_DATE"
+
+        find "$DOCS_DIR" -type f \( -name '*.md' -o -name '*.yml' \) -print0 \
+          | xargs -0 sed -i \
+          -e "s/__PLUGIN_VERSION__/${PLUGIN_VERSION}/g" \
+          -e "s/__PLUGIN_DATE__/${PLUGIN_DATE}/g"
 
         CMD="mkdocs build --config-file '${{ inputs.mkdocs_config }}' --site-dir '${{ inputs.output_dir }}'"
 

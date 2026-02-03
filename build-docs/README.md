@@ -43,13 +43,11 @@ Damit werden sowohl klassische Material-Dokumentationen als auch modulare, wiede
 
 ## Inputs
 
-| Name            | Required | Default     | Description |
-|-----------------|----------|-------------|-------------|
-| `docs_dir`      | no       | `docs`      | Directory containing documentation sources |
-| `mkdocs_config` | no       | `mkdocs.yml`| Path to MkDocs configuration file |
-| `site_name`     | no       | –           | Override `site_name` from config |
-| `site_url`      | no       | –           | Override `site_url` from config |
-| `output_dir`    | no       | `site`      | Output directory for generated HTML |
+| Name            | Pflicht  | Standard    | Beschreibung                            |
+|-----------------|----------|-------------|-----------------------------------------|
+| `version`       | ja       | --          | Versionskennung der Dokumentation       |
+| `mkdocs_config` | no       | `mkdocs.yml`| Pfad zur MkDocs Konfigurationsdatei     |
+| `output_dir`    | no       | `site`      | Ausgabeverzeichnis für generiertes HTML |
 
 ## Integrationsbeispiel
 
@@ -57,6 +55,7 @@ Damit werden sowohl klassische Material-Dokumentationen als auch modulare, wiede
 - name: Build documentation
   uses: d3datadevelopment/ci-actions/build-docs@v1
   with:
+    version: ${{ github.ref_name }}
     mkdocs_config: docs/mkdocs.yml
     output_dir: ${{ github.workspace }}/documentation
 ```
