@@ -34,14 +34,38 @@ jobs:
   build-docs:
     runs-on: ubuntu-latest
 
+    outputs:
+      version: ${{ steps.resolve_version.outputs.version }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve version
+        id: resolve_version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+
+          if ! [[ "$VERSION" =~ ^v?[0-9]{1,3}(\.[0-9]{1,3}){2,3}$ ]]; then
+            echo "::error::Invalid version format: $VERSION"
+            exit 1
+          fi
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Version could not be resolved"
+            exit 1
+          fi
+
+          echo "Resolved version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build documentation
         uses: d3datadevelopment/ci-actions/build-docs@v1.1.0
         with:
-          version: ${{ github.ref_name }}
+          version: ${{ steps.resolve_version.outputs.version }}
           mkdocs_config: ${{ env.MKDOCS_CONFIG }}
           output_dir: ${{ github.workspace }}/${{ env.DOCS_OUTPUT_DIR }}
 
@@ -65,33 +89,12 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.DOCS_OUTPUT_DIR }}
 
-      - name: Resolve version
-        id: resolve_version
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-
-          if ! [[ "$VERSION" =~ ^v?[0-9]{1,3}(\.[0-9]{1,3}){2,3}$ ]]; then
-            echo "::error::Invalid version format: $VERSION"
-            exit 1
-          fi
-
-          if [ -z "$VERSION" ]; then
-            echo "::error::Version could not be resolved"
-            exit 1
-          fi
-
-          echo "Resolved version: $VERSION"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Deploy documentation
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_docs == 'true' }}
         uses: d3datadevelopment/ci-actions/publish-docs@v1.1.0
         with:
           plugin_id: ${{ env.PLUGIN_ID }}
-          version: ${{ steps.resolve_version.outputs.version }}
+          version: ${{ needs.build-docs.outputs.version }}
           source_dir: ${{ env.DOCS_OUTPUT_DIR }}
           docs_repo: ${{ vars.DOCS_REPO_URL }}
           git_username: ${{ vars.DOCS_REPO_USER }}
