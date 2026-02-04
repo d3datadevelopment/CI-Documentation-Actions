@@ -131,18 +131,13 @@ runs:
         GIT_USER="${{ inputs.git_username }}"
         TOKEN="${{ inputs.access_token }}"
 
-        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
-
         echo "::add-mask::${TOKEN}"
 
-        git clone "$AUTH_REPO" docs-repo
-        cd docs-repo
+        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
 
-        if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-          git checkout "$BRANCH"
-        else
-          git checkout -b "$BRANCH"
-        fi
+        git clone --depth 1 "$AUTH_REPO" docs-repo
+        cd docs-repo
+        git checkout -B "$BRANCH"
 
     - name: Publish documentation
       shell: bash
@@ -158,7 +153,15 @@ runs:
         GIT_USER="${{ inputs.git_username }}"
         TOKEN="${{ inputs.access_token }}"
 
-        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
+        if [[ -z "$PLUGIN_ID" || -z "$VERSION" ]]; then
+          echo "::error::Invalid target path components"
+          exit 1
+        fi
+
+        # remove leading and trailing slashes
+        BASE_PATH="${BASE_PATH#/}"
+        BASE_PATH="${BASE_PATH%/}"
+        [[ "$BASE_PATH" == "." ]] && BASE_PATH=""
 
         echo "::add-mask::${TOKEN}"
 
@@ -167,27 +170,26 @@ runs:
           exit 1
         fi
 
-        TARGET_DIR="docs-repo/${BASE_PATH}/${PLUGIN_ID}/${VERSION}"
+        TARGET_DIR="docs-repo/${BASE_PATH:+$BASE_PATH/}${PLUGIN_ID}/${VERSION}"
 
         echo "Publishing docs to $TARGET_DIR"
 
-        rm -rf "$TARGET_DIR"
-        mkdir -p "$TARGET_DIR"
-
-        cp -R "$SOURCE_DIR"/. "$TARGET_DIR"/
+        rsync -a --delete "$SOURCE_DIR"/ "$TARGET_DIR"/
 
         cd docs-repo
 
         git config user.name "docs-bot"
         git config user.email "docs-bot@users.noreply.github.com"
 
-        git add .
+        git add --all
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
           exit 0
         fi
 
+        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
+
         git commit -m "docs(${PLUGIN_ID}): publish ${VERSION}"
-        git remote set-url origin "$AUTH_REPO"
-        git push -u origin "$BRANCH"
+        git push "$AUTH_REPO" HEAD:"$BRANCH" --set-upstream
+        unset TOKEN AUTH_REPO
