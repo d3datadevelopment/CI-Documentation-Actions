@@ -49,7 +49,7 @@ runs:
 
         RAW_VERSION="${{ inputs.version }}"
         PLUGIN_VERSION="${RAW_VERSION#v}"
-        PLUGIN_DATE="$(date +'%d.%m.%Y')"
+        PLUGIN_DATE="$(date -u +'%Y-%m-%d')"
 
         if [[ "$PLUGIN_VERSION" =~ ^(.+)\.([0-9]{3})$ ]]; then
           PLUGIN_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]:0:1}"
