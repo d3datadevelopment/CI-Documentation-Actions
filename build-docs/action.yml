@@ -65,9 +65,18 @@ runs:
           -e "s/__PLUGIN_VERSION__/${PLUGIN_VERSION}/g" \
           -e "s/__PLUGIN_DATE__/${PLUGIN_DATE}/g"
 
-        CMD="mkdocs build --config-file '${{ inputs.mkdocs_config }}' --site-dir '${{ inputs.output_dir }}'"
+        CMD="mkdocs build --clean --config-file '${{ inputs.mkdocs_config }}' --site-dir '${{ inputs.output_dir }}'"
 
         echo "Running: $CMD"
         eval "$CMD"
 
         find "${{ inputs.output_dir }}" -name 'sitemap.xml*' -delete
+        
+        find "${{ inputs.output_dir }}" -name "*.map" -delete
+        
+        find "${{ inputs.output_dir }}/assets/javascripts/lunr/min" \
+            -type f \
+            ! -name 'lunr.de.min.js' \
+            ! -name 'lunr.stemmer.support.min.js' \
+            ! -name 'lunr.multi.min.js' \
+            -delete
