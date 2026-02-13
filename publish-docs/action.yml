@@ -1,5 +1,5 @@
-name: publish documentation to git repository
-description: "Kopiert generierte Doku versioniert in ein Repository"
+name: publish documentation
+description: "Sendet generierte Doku als dispatch an zentralen Docs-Builder"
 
 inputs:
   plugin_id:
@@ -14,26 +14,6 @@ inputs:
     description: "Pfad zur erzeugten Dokumentation"
     required: true
 
-  docs_repo:
-    description: "HTTPS clone URL des Ziel-Repositories"
-    required: true
-
-  git_username:
-    description: "Git Benutzername für HTTPS Authentication"
-    required: true
-
-  access_token:
-    description: "Access Token mit Schreibrechten"
-    required: true
-
-  docs_branch:
-    description: "Branch im Docs-Repository"
-    default: "main"
-
-  target_base_path:
-    description: "Basisverzeichnis im Docs-Repo"
-    default: "."
-
 runs:
   using: "composite"
   steps:
@@ -44,9 +24,6 @@ runs:
         echo "Plugin ID        : ${{ inputs.plugin_id }}"
         echo "Version          : ${{ inputs.version }}"
         echo "Source dir       : ${{ inputs.source_dir }}"
-        echo "Docs repository  : ${{ inputs.docs_repo }}"
-        echo "Docs branch      : ${{ inputs.docs_branch }}"
-        echo "Target base path : ${{ inputs.target_base_path }}"
         echo "==========================="
 
     - name: Validate inputs
@@ -63,8 +40,6 @@ runs:
         [ -z "${{ inputs.plugin_id }}" ]     && error "plugin_id is required and must not be empty"
         [ -z "${{ inputs.version }}" ]       && error "version is required and must not be empty"
         [ -z "${{ inputs.source_dir }}" ]    && error "source_dir is required and must not be empty"
-        [ -z "${{ inputs.docs_repo }}" ]     && error "docs_repo is required and must not be empty"
-        [ -z "${{ inputs.access_token }}" ]  && error "access_token is required and must not be empty"
 
         # source_dir muss existieren
         if [ ! -d "${{ inputs.source_dir }}" ]; then
@@ -120,76 +95,3 @@ runs:
 
         echo "Resolved documentation version: $DOC_VERSION"
         echo "doc_version=$DOC_VERSION" >> "$GITHUB_OUTPUT"
-
-    - name: Clone docs repository
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        REPO="${{ inputs.docs_repo }}"
-        BRANCH="${{ inputs.docs_branch }}"
-        GIT_USER="${{ inputs.git_username }}"
-        TOKEN="${{ inputs.access_token }}"
-
-        echo "::add-mask::${TOKEN}"
-
-        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
-
-        git clone --depth 1 "$AUTH_REPO" docs-repo
-        cd docs-repo
-        git checkout -B "$BRANCH"
-
-    - name: Publish documentation
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        PLUGIN_ID="${{ inputs.plugin_id }}"
-        VERSION="${{ steps.normalize_version.outputs.doc_version }}"
-        SOURCE_DIR="${{ inputs.source_dir }}"
-        BASE_PATH="${{ inputs.target_base_path }}"
-        BRANCH="${{ inputs.docs_branch }}"
-        REPO="${{ inputs.docs_repo }}"
-        GIT_USER="${{ inputs.git_username }}"
-        TOKEN="${{ inputs.access_token }}"
-
-        if [[ -z "$PLUGIN_ID" || -z "$VERSION" ]]; then
-          echo "::error::Invalid target path components"
-          exit 1
-        fi
-
-        # remove leading and trailing slashes
-        BASE_PATH="${BASE_PATH#/}"
-        BASE_PATH="${BASE_PATH%/}"
-        [[ "$BASE_PATH" == "." ]] && BASE_PATH=""
-
-        echo "::add-mask::${TOKEN}"
-
-        if [ ! -d "$SOURCE_DIR" ]; then
-          echo "Source dir not found: $SOURCE_DIR"
-          exit 1
-        fi
-
-        TARGET_DIR="docs-repo/${BASE_PATH:+$BASE_PATH/}${PLUGIN_ID}/${VERSION}"
-
-        echo "Publishing docs to $TARGET_DIR"
-
-        rsync -a --delete "$SOURCE_DIR"/ "$TARGET_DIR"/
-
-        cd docs-repo
-
-        git config user.name "docs-bot"
-        git config user.email "docs-bot@users.noreply.github.com"
-
-        git add --all
-
-        if git diff --cached --quiet; then
-          echo "No changes to commit"
-          exit 0
-        fi
-
-        AUTH_REPO="$(echo "$REPO" | sed "s#https://#https://${GIT_USER}:${TOKEN}@#")"
-
-        git commit -m "docs(${PLUGIN_ID}): publish ${VERSION}"
-        git push "$AUTH_REPO" HEAD:"$BRANCH" --set-upstream
-        unset TOKEN AUTH_REPO
