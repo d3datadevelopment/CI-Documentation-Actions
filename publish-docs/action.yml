@@ -14,6 +14,14 @@ inputs:
     description: "Pfad zur erzeugten Dokumentation"
     required: true
 
+  dispatch_repository:
+    description: "org/docs-repo"
+    required: true
+
+  dispatch_token:
+    description: "Token for repository_dispatch"
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -95,3 +103,34 @@ runs:
 
         echo "Resolved documentation version: $DOC_VERSION"
         echo "doc_version=$DOC_VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: module-docs-${{ steps.normalize_version.outputs.doc_version }}
+        path: ${{ inputs.source_dir }}
+
+    - name: Log dispatch payload
+      shell: bash
+      run: |
+        echo "Dispatching module documentation"
+        echo "Plugin ID      : ${{ inputs.plugin_id }}"
+        echo "Version        : ${{ steps.normalize_version.outputs.doc_version }}"
+        echo "Source repo    : ${{ github.repository }}"
+        echo "Run ID         : ${{ github.run_id }}"
+        echo "Target repo    : ${{ inputs.dispatch_repository }}"
+
+    - name: Send repository dispatch
+      uses: peter-evans/repository-dispatch@v3
+      with:
+        token: ${{ inputs.dispatch_token }}
+        repository: ${{ inputs.dispatch_repository }}
+        event-type: module-docs-update
+        client-payload: |
+          {
+            "plugin_id": "${{ inputs.plugin_id }}",
+            "module_version": "${{ steps.normalize_version.outputs.doc_version }}",
+            "artifact_name": "module-docs-${{ steps.normalize_version.outputs.doc_version }}",
+            "source_repo": "${{ github.repository }}",
+            "source_run_id": "${{ github.run_id }}"
+          }
