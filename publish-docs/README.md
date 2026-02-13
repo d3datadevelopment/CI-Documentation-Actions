@@ -1,85 +1,152 @@
-# Versionierte Dokumentation aus CI heraus deployen
+# Versionierte Dokumentation aus CI heraus veröffentlichen
 
-**Publish Documentation** ist eine Composite GitHub Action zur **kontrollierten Veröffentlichung versionierter Dokumentation** in ein separates Repository.
-Sie ist dafür gedacht, **bereits generierte Dokumentation** (z. B. aus MkDocs, Docusaurus, Sphinx, Custom-Generatoren) aus einem CI-Workflow heraus **strukturiert, reproduzierbar und versionssicher** zu publizieren.
+**Publish Documentation** ist eine Composite GitHub Action zur kontrollierten Übergabe versionierter Dokumentation an einen zentralen Dokumentations-Workflow.
 
-Die Action übernimmt bewusst **keine Generierung**, sondern ausschließlich das **Verteilen, Versionieren und Committen** der fertigen Artefakte.
+Die Action übernimmt **keine Generierung**, sondern ausschließlich:
 
-### Typische Einsatzszenarien
+- Validierung der Eingaben
+- Normalisierung der Versionsnummer
+- Upload der generierten Dokumentation als Artifact
+- Auslösen eines zentralen `repository_dispatch` Events
 
-* Versionierte Modul- oder Plugin-Dokumentation
-* Zentrale Doku-Repositories für mehrere Kundenprojekte
-* Automatisches Publizieren bei Tags oder Releases
-* Ersatz für manuelle GitHub-Pages-Pflege
-* Kombination mit MkDocs, Material, Docusaurus oder Custom-Generatoren
+Die eigentliche Veröffentlichung (Server-Deployment, Übersichtsseiten-Generierung etc.) erfolgt im zentralen Docs-Repository.
 
-## Zielstruktur im Pages-Repository
+---
 
-Die Dokumentation wird nach folgendem Schema abgelegt:
+## Architekturüberblick
 
+```text
+Modul-Repository
+   │
+   │ mkdocs build
+   │
+   ▼
+Publish-Docs Action
+   │
+   │ upload-artifact
+   │ repository_dispatch
+   ▼
+Zentrales Docs-Repository
+   │
+   │ Artifact herunterladen
+   │ Server-Deployment
+   ▼
+Server
 ```
-<target_base_path>/
-└── <plugin_id>/
-    └── <version>/
-        └── ... Doku-Inhalte ...
-```
 
-Damit lassen sich mehrere Plugins/Module sowie mehrere Versionen parallel betreiben, ohne sich gegenseitig zu überschreiben.
+Die Action ist damit bewusst ein **reiner Übergabemechanismus** zwischen Modul-Workflow und zentraler Orchestrierung.
 
-Jede Version ist ein vollständiger Snapshot.
-Bestehende Versionen werden bei erneutem Deploy **komplett ersetzt**.
+---
+
+## Typische Einsatzszenarien
+
+- Versionierte Modul- oder Plugin-Dokumentation
+- Mehrere Projekte mit zentraler Doku-Instanz
+- Automatisches Publizieren bei Release-Tags
+- Strikte Trennung zwischen Modul-Repo und Infrastruktur
+- Reproduzierbare Doku-Veröffentlichung ohne Artefakt-Commits
+
+---
 
 ## Enthaltene Schritte
 
-**1. Initialisierung & Validierung**
+### 1. Initialisierung & Validierung
 
-* Explizite Ausgabe aller relevanten Parameter
-* Strikte Validierung:
-
-  * Pflichtfelder müssen gesetzt sein
-  * `plugin_id` nur mit ordnerfreundlichen Zeichen
-  * `version` ohne Leerzeichen oder Slashes
-  * `source_dir` muss existieren
-* Frühes, sauberes Abbrechen bei Konfigurationsfehlern
-
----
-
-**2. Checkout des Pages-Repositories**
-
-* Checkout eines beliebigen Repositories und Branches
-* Authentifizierung über explizites Access Token
-* Keine Annahmen über Default-Repos oder Organisationsstruktur
+- Ausgabe aller relevanten Parameter
+- Strikte Prüfung der Pflichtfelder
+- Validierung von:
+  - `plugin_id` (ordnerfreundliche Zeichen)
+  - `version` (keine Leerzeichen oder Slashes)
+  - `source_dir` (muss existieren)
+- Frühes Abbrechen bei Konfigurationsfehlern
 
 ---
 
-**3. Veröffentlichung der Dokumentation**
+### 2. Versionsnormalisierung
 
-* Zielverzeichnis wird deterministisch berechnet
-* Bestehende Versionen werden **vollständig ersetzt**
-* Rekursives Kopieren der erzeugten Doku-Artefakte
-* Commit nur bei tatsächlichen Änderungen
-* Klar strukturierte Commit-Nachrichten:
+Die übergebene Versionsnummer wird intern normalisiert:
 
-  ```
-  docs(<plugin_id>): publish <version>
-  ```
+- optionales führendes `v` wird entfernt
+- 3-Level-Versionen (`1.2.3`) werden direkt übernommen
+- 4-Level-Versionen (`1.2.3.400`) werden organisationskonform reduziert
+
+Ungültige Formate führen zu einem Abbruch des Workflows.
+
+Die normalisierte Version wird für:
+
+- Artifact-Namen
+- Dispatch-Payload
+
+verwendet.
+
+---
+
+### 3. Artifact-Upload
+
+Die generierte Dokumentation wird als GitHub Artifact hochgeladen.
+
+Artifact-Name:
+
+```
+module-docs-{normalized_version}
+```
+
+Inhalt:
+
+```
+{source_dir}/
+```
+
+Die Action selbst führt keinen Server-Upload durch.
+
+---
+
+### 4. Triggern des zentralen Docs-Repositories
+
+Per `repository_dispatch` wird das zentrale Docs-Repository informiert.
+
+Übertragene Payload:
+
+```json
+{
+  "plugin_id": "...",
+  "module_version": "...",
+  "artifact_name": "...",
+  "source_repo": "...",
+  "source_run_id": "..."
+}
+```
+
+Das zentrale Repository übernimmt:
+
+- Download des Artifacts
+- Deployment auf den Zielserver
+- vollständige Neugenerierung der Übersichtsseiten
+
+---
 
 ## Inputs
 
-| Name               | Pflicht | Beschreibung                              |
-| ------------------ | ------- | ----------------------------------------- |
-| `plugin_id`        | ja      | Eindeutige Plugin-ID (wird Ordnername)    |
-| `version`          | ja      | Versionskennung der Dokumentation         |
-| `source_dir`       | ja      | Pfad zur generierten Dokumentation        |
-| `docs_repo`        | ja      | Ziel-Repository (GitHub Pages)            |
-| `git_username`     | ja      | Git Benutzername für HTTPS Authentication |
-| `access_token`     | ja      | Access Token mit Schreibrechten           |
-| `docs_branch`      | nein    | Ziel-Branch (Default: `main`)             |
-| `target_base_path` | nein    | Basisverzeichnis im Docs-Repository       |
+| Name                  | Pflicht | Beschreibung                                         |
+|-----------------------|---------|------------------------------------------------------|
+| `plugin_id`           | ja      | Eindeutige Plugin-ID (wird als Ordnername verwendet) |
+| `version`             | ja      | Versionskennung der Dokumentation                    |
+| `source_dir`          | ja      | Pfad zur bereits generierten Dokumentation           |
+| `dispatch_repository` | ja      | Ziel-Repository (z. B. `org/docs-repo`)              |
+| `dispatch_token`      | ja      | Token mit Schreibrechten für `repository_dispatch`   |
+
+---
 
 ## Berechtigungen
 
-Das übergebene `access_token` benötigt Schreibrechte (`contents: write`) auf dem Docs-Repository.
+Das übergebene `dispatch_token` benötigt:
+
+- `contents: read`
+- `contents: write`
+
+Empfohlen wird ein Fine-grained Personal Access Token mit Zugriff ausschließlich auf das zentrale Docs-Repository.
+
+---
 
 ## Integrationsbeispiel
 
@@ -90,21 +157,28 @@ Das übergebene `access_token` benötigt Schreibrechte (`contents: write`) auf d
     plugin_id: myplugin
     version: ${{ github.ref_name }}
     source_dir: documentation
-    docs_repo: ${{ vars.DOCS_REPO_URL }}
-    git_username: ${{ vars.DOCS_REPO_USER }}
-    access_token: ${{ secrets.DOCS_REPO_TOKEN }}
-    docs_branch: main
-    target_base_path: .
+    dispatch_repository: ${{ vars.DOCS_REPOSITORY }}
+    dispatch_token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
 ```
 
-## Versionsnormalisierung
+---
 
-Die übergebene Versionsnummer wird vor der Veröffentlichung automatisch normalisiert.
+## Designprinzipien
 
-Dabei werden u. a. folgende Fälle berücksichtigt:
+- Keine direkte Serverkommunikation aus Modul-Repositories
+- Keine Artefakt-Commits in Git
+- Keine GitHub Pages Abhängigkeit
+- Zentrale Orchestrierung im Docs-Repository
+- Klare Trennung zwischen Generierung und Veröffentlichung
 
-- optionale führende `v`-Präfixe (z. B. `v1.2.3`)
-- organisationsweit verwendete Sonderformate für Compiler-/PHP-Varianten
+---
 
-Die Dokumentation wird stets unter der **fachlich relevanten Version** veröffentlicht.
-Abweichende oder ungültige Versionsformate führen zu einem Abbruch des Workflows.
+## Abgrenzung
+
+Diese Action:
+
+- baut keine Dokumentation
+- deployt nichts direkt
+- verwaltet keine Server-Zugänge
+
+Sie ist ausschließlich der standardisierte Übergabemechanismus in einer mehrstufigen Doku-Architektur.
