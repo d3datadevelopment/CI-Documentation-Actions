@@ -67,7 +67,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build documentation
-        uses: d3datadevelopment/ci-actions/build-docs@v1.1.0
+        uses: d3datadevelopment/ci-documentation-actions/build-docs@v1.0.0
         with:
           version: ${{ steps.resolve_version.outputs.version }}
           mkdocs_config: ${{ env.MKDOCS_CONFIG }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Deploy documentation
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_docs == 'true' }}
-        uses: d3datadevelopment/ci-actions/publish-docs@v1.1.0
+        uses: d3datadevelopment/ci-documentation-actions/publish-docs@v1.0.0
         with:
           plugin_id: ${{ env.PLUGIN_ID }}
           version: ${{ needs.build-docs.outputs.version }}
