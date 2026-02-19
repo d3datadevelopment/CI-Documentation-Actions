@@ -53,7 +53,7 @@ Damit werden sowohl klassische Material-Dokumentationen als auch modulare, wiede
 
 ```
 - name: Build documentation
-  uses: d3datadevelopment/ci-actions/build-docs@v1
+  uses: d3datadevelopment/ci-documentation-actions/build-docs@v1.0.0
   with:
     version: ${{ github.ref_name }}
     mkdocs_config: docs/mkdocs.yml

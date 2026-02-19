@@ -152,7 +152,7 @@ Empfohlen wird ein Fine-grained Personal Access Token mit Zugriff ausschließlic
 
 ```yaml
 - name: Publish documentation
-  uses: d3datadevelopment/ci-actions/publish-docs@v1
+  uses: d3datadevelopment/ci-documentation-actions/publish-docs@v1.0.0
   with:
     plugin_id: myplugin
     version: ${{ github.ref_name }}
