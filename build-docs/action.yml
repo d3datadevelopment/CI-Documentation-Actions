@@ -50,6 +50,7 @@ runs:
         RAW_VERSION="${{ inputs.version }}"
         PLUGIN_VERSION="${RAW_VERSION#v}"
         PLUGIN_DATE="$(date -u +'%Y-%m-%d')"
+        YEAR="$(date -u +'%Y')"
 
         if [[ "$PLUGIN_VERSION" =~ ^(.+)\.([0-9]{3})$ ]]; then
           PLUGIN_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]:0:1}"
@@ -59,11 +60,13 @@ runs:
         echo "Docs directory: $DOCS_DIR"
         echo "Plugin version: $PLUGIN_VERSION"
         echo "Plugin date   : $PLUGIN_DATE"
+        echo "Year          : $YEAR"
 
         find "$DOCS_DIR" -type f \( -name '*.md' -o -name '*.yml' \) -print0 \
           | xargs -0 sed -i \
           -e "s/__PLUGIN_VERSION__/${PLUGIN_VERSION}/g" \
-          -e "s/__PLUGIN_DATE__/${PLUGIN_DATE}/g"
+          -e "s/__PLUGIN_DATE__/${PLUGIN_DATE}/g" \
+          -e "s/__YEAR__/${YEAR}/g"
 
         CMD="mkdocs build --clean --config-file '${{ inputs.mkdocs_config }}' --site-dir '${{ inputs.output_dir }}'"
 
